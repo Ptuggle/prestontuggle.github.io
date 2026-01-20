@@ -53,6 +53,11 @@ p {
     margin: 10px 0;
 }
 
+img {
+    display: block;
+    margin-bottom: 20px;
+}
+
 footer {
     margin-top: 50px;
     font-size: 0.9em;
