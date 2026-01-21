@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Preston Tuggle - 15 Puzzle Game">
+    <title>Puzzle - Preston Tuggle</title>
+    <style>
+        /* Match site aesthetic */
+        body {
+            font-family: "Times New Roman", Times, serif;
+            background-color: #ffffff;
+            color: #000000;
+            margin: 40px;
+            line-height: 1.6;
+            max-width: 800px;
+        }
+
+        header h1 {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        nav {
+            margin: 20px 0;
+            padding: 10px 0;
+            border-top: 1px solid #000000;
+            border-bottom: 1px solid #000000;
+        }
+
+        nav a {
+            color: #0000ff;
+            text-decoration: underline;
+        }
+
+        nav a:visited {
+            color: #551a8b;
+        }
+
+        nav a:hover {
+            background-color: #ffff00;
+        }
+
+        main {
+            margin: 30px 0;
+        }
+
+        footer {
+            margin-top: 50px;
+            font-size: 0.9em;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #000000;
+        }
+
+        /* Puzzle styles */
+        .puzzle-container {
+            display: inline-block;
+        }
+
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            grid-template-rows: repeat(4, 100px);
+            gap: 2px;
+            border: 2px solid #000000;
+            background-color: #000000;
+            margin: 20px 0;
+        }
+
+        .tile {
+            width: 100px;
+            height: 100px;
+            background-image: url('taos.png');
+            background-size: 400px 400px;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.1s ease;
+        }
+
+        .tile:hover:not(.empty) {
+            opacity: 0.9;
+        }
+
+        .tile.empty {
+            background: #ffffff;
+            cursor: default;
+        }
+
+        .tile-number {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            background: rgba(255, 255, 255, 0.85);
+            color: #000000;
+            font-size: 12px;
+            padding: 2px 5px;
+            font-family: Arial, sans-serif;
+        }
+
+        .controls {
+            margin: 20px 0;
+        }
+
+        .controls button {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 1em;
+            padding: 8px 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            background-color: #ffffff;
+            border: 1px solid #000000;
+            color: #000000;
+        }
+
+        .controls button:hover {
+            background-color: #ffff00;
+        }
+
+        .controls button:active {
+            background-color: #cccc00;
+        }
+
+        .stats {
+            margin: 15px 0;
+            font-size: 1.1em;
+        }
+
+        .stats span {
+            margin-right: 20px;
+        }
+
+        .win-message {
+            display: none;
+            padding: 15px;
+            border: 2px solid #000000;
+            margin: 20px 0;
+            background-color: #ffffcc;
+        }
+
+        .win-message.show {
+            display: block;
+        }
+
+        .peek-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .peek-overlay.show {
+            display: flex;
+        }
+
+        .peek-overlay img {
+            max-width: 90vmin;
+            max-height: 90vmin;
+            border: 4px solid #ffffff;
+        }
+
+        .peek-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffffff;
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 500px) {
+            body {
+                margin: 20px;
+            }
+
+            .puzzle-grid {
+                grid-template-columns: repeat(4, 70px);
+                grid-template-rows: repeat(4, 70px);
+            }
+
+            .tile {
+                width: 70px;
+                height: 70px;
+                background-size: 280px 280px;
+            }
+
+            .tile-number {
+                font-size: 10px;
+                padding: 1px 3px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Preston Tuggle</h1>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a> |
+        <a href="about.html">About</a> |
+        <a href="puzzle.html">Puzzle</a>
+    </nav>
+
+    <main>
+        <h2>15 Puzzle</h2>
+        <p>Slide the tiles to restore the image. Click any tile next to the empty space to move it.</p>
+
+        <div class="stats">
+            <span>Moves: <strong id="move-count">0</strong></span>
+            <span>Time: <strong id="timer">0:00</strong></span>
+        </div>
+
+        <div class="puzzle-container">
+            <div class="puzzle-grid" id="puzzle-grid"></div>
+        </div>
+
+        <div class="controls">
+            <button onclick="shuffle()">Shuffle</button>
+            <button onclick="startPeek()">Peek</button>
+            <button onclick="resetGame()">Reset</button>
+        </div>
+
+        <div class="win-message" id="win-message">
+            Solved! You completed the puzzle in <strong id="final-moves">0</strong> moves and <strong id="final-time">0:00</strong>.
+        </div>
+    </main>
+
+    <div class="peek-overlay" id="peek-overlay" onclick="endPeek()">
+        <img src="taos.png" alt="Complete puzzle image">
+        <div class="peek-hint">Click anywhere to close</div>
+    </div>
+
+    <footer>
+        <hr>
+        <p>&copy; 2026</p>
+    </footer>
+
+    <script>
+        // Game state
+        let tiles = [];
+        let emptyIndex = 15;
+        let moves = 0;
+        let timerInterval = null;
+        let seconds = 0;
+        let gameStarted = false;
+        let gameWon = false;
+
+        // Initialize the puzzle
+        function init() {
+            // Create solved state: tiles 0-14 represent positions, 15 is empty
+            tiles = [];
+            for (let i = 0; i < 16; i++) {
+                tiles.push(i);
+            }
+            emptyIndex = 15;
+            moves = 0;
+            seconds = 0;
+            gameStarted = false;
+            gameWon = false;
+            clearInterval(timerInterval);
+            updateDisplay();
+            render();
+            document.getElementById('win-message').classList.remove('show');
+        }
+
+        // Render the puzzle grid
+        function render() {
+            const grid = document.getElementById('puzzle-grid');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < 16; i++) {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.dataset.index = i;
+
+                if (tiles[i] === 15) {
+                    // Empty tile
+                    tile.classList.add('empty');
+                } else {
+                    // Calculate background position for this tile's image portion
+                    const tileValue = tiles[i];
+                    const srcRow = Math.floor(tileValue / 4);
+                    const srcCol = tileValue % 4;
+
+                    // For 100px tiles displaying a 400px scaled image
+                    const bgX = -srcCol * 100;
+                    const bgY = -srcRow * 100;
+                    tile.style.backgroundPosition = `${bgX}px ${bgY}px`;
+
+                    // Add tile number
+                    const number = document.createElement('span');
+                    number.className = 'tile-number';
+                    number.textContent = tileValue + 1;
+                    tile.appendChild(number);
+
+                    tile.onclick = () => moveTile(i);
+                }
+
+                grid.appendChild(tile);
+            }
+
+            // Update background size for mobile
+            updateTileBackgrounds();
+        }
+
+        // Update tile backgrounds for responsive sizing
+        function updateTileBackgrounds() {
+            const isMobile = window.innerWidth <= 500;
+            const tileSize = isMobile ? 70 : 100;
+            const bgSize = tileSize * 4;
+
+            document.querySelectorAll('.tile:not(.empty)').forEach(tile => {
+                const index = parseInt(tile.dataset.index);
+                const tileValue = tiles[index];
+                const srcRow = Math.floor(tileValue / 4);
+                const srcCol = tileValue % 4;
+                const bgX = -srcCol * tileSize;
+                const bgY = -srcRow * tileSize;
+                tile.style.backgroundPosition = `${bgX}px ${bgY}px`;
+            });
+        }
+
+        // Check if a tile can move (is adjacent to empty space)
+        function canMove(index) {
+            const emptyRow = Math.floor(emptyIndex / 4);
+            const emptyCol = emptyIndex % 4;
+            const tileRow = Math.floor(index / 4);
+            const tileCol = index % 4;
+
+            // Check if adjacent (not diagonal)
+            const rowDiff = Math.abs(emptyRow - tileRow);
+            const colDiff = Math.abs(emptyCol - tileCol);
+
+            return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+        }
+
+        // Move a tile if possible
+        function moveTile(index) {
+            if (gameWon) return;
+            if (!canMove(index)) return;
+
+            // Start timer on first move
+            if (!gameStarted) {
+                gameStarted = true;
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    updateDisplay();
+                }, 1000);
+            }
+
+            // Swap tile with empty space
+            tiles[emptyIndex] = tiles[index];
+            tiles[index] = 15;
+            emptyIndex = index;
+            moves++;
+
+            updateDisplay();
+            render();
+            checkWin();
+        }
+
+        // Update move counter and timer display
+        function updateDisplay() {
+            document.getElementById('move-count').textContent = moves;
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            document.getElementById('timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Check if puzzle is solved
+        function checkWin() {
+            for (let i = 0; i < 16; i++) {
+                if (tiles[i] !== i) return;
+            }
+
+            // Won!
+            gameWon = true;
+            clearInterval(timerInterval);
+
+            document.getElementById('final-moves').textContent = moves;
+            document.getElementById('final-time').textContent = document.getElementById('timer').textContent;
+            document.getElementById('win-message').classList.add('show');
+        }
+
+        // Shuffle the puzzle (guaranteed solvable)
+        function shuffle() {
+            // Reset state
+            moves = 0;
+            seconds = 0;
+            gameStarted = false;
+            gameWon = false;
+            clearInterval(timerInterval);
+            document.getElementById('win-message').classList.remove('show');
+
+            // Fisher-Yates shuffle
+            tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+            for (let i = tiles.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+            }
+
+            // Find empty tile position
+            emptyIndex = tiles.indexOf(15);
+
+            // Check solvability and fix if needed
+            if (!isSolvable()) {
+                // Swap two non-empty tiles to make it solvable
+                const nonEmpty = tiles.filter(t => t !== 15);
+                const idx1 = tiles.indexOf(nonEmpty[0]);
+                const idx2 = tiles.indexOf(nonEmpty[1]);
+                [tiles[idx1], tiles[idx2]] = [tiles[idx2], tiles[idx1]];
+            }
+
+            updateDisplay();
+            render();
+        }
+
+        // Check if current configuration is solvable
+        function isSolvable() {
+            // Count inversions (pairs where a larger number precedes a smaller one)
+            let inversions = 0;
+            const flatTiles = tiles.filter(t => t !== 15); // Exclude empty
+
+            for (let i = 0; i < flatTiles.length; i++) {
+                for (let j = i + 1; j < flatTiles.length; j++) {
+                    if (flatTiles[i] > flatTiles[j]) {
+                        inversions++;
+                    }
+                }
+            }
+
+            // For 4x4 puzzle:
+            // - If empty is on even row from bottom, inversions must be odd
+            // - If empty is on odd row from bottom, inversions must be even
+            const emptyRow = Math.floor(emptyIndex / 4);
+            const emptyRowFromBottom = 3 - emptyRow; // 0-indexed from bottom
+
+            if (emptyRowFromBottom % 2 === 0) {
+                return inversions % 2 === 1;
+            } else {
+                return inversions % 2 === 0;
+            }
+        }
+
+        // Reset to solved state
+        function resetGame() {
+            init();
+        }
+
+        // Peek at solved image
+        function startPeek() {
+            document.getElementById('peek-overlay').classList.add('show');
+        }
+
+        function endPeek() {
+            document.getElementById('peek-overlay').classList.remove('show');
+        }
+
+        // Handle escape key for peek
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                endPeek();
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', updateTileBackgrounds);
+
+        // Start the game
+        init();
+    </script>
+</body>
+</html>
